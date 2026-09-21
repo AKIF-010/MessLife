@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "711664301913",
+    "project_id": "meife-fb37e",
+    "storage_bucket": "meife-fb37e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:711664301913:android:00be3cf5bf2e2b76ebfe48",
+        "android_client_info": {
+          "package_name": "com.messlife.messlife"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvceIokL-XzaBBj77zyDLyjzhrrh2D-E8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
