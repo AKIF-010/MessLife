@@ -12,7 +12,20 @@
           "package_name": "com.messlife.messlife"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "711664301913-sct3ncocosdsc5ql788d1t9le3j81ftg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.messlife.messlife",
+            "certificate_hash": "13f768312de4ceee96ff91bc46286b892cf1efa6"
+          }
+        },
+        {
+          "client_id": "711664301913-9iefgtssi8h6rfgiipfmao32gbfivu03.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDvceIokL-XzaBBj77zyDLyjzhrrh2D-E8"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "711664301913-9iefgtssi8h6rfgiipfmao32gbfivu03.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "711664301913-nfd225jlkm622pnntn9i9qr6baftg9df.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.messlife.messlife"
+              }
+            }
+          ]
         }
       }
     }
