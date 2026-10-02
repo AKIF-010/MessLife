@@ -1,4 +1,4 @@
-name: messlife
+name: MessLife
 description: "MessLife - The Easiest Solution To Find And Manage A Mess"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -50,8 +50,20 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates Android/iOS launcher icons from assets/icons/
+  flutter_launcher_icons: ^0.14.1
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# ── Launcher icon config (run: dart run flutter_launcher_icons) ──────
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/messlife_appicon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "assets/icons/messlife_background.png"
+  adaptive_icon_foreground: "assets/icons/messlife_foreground.png"
 
 # The following section is specific to Flutter packages.
 flutter:
@@ -60,6 +72,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/icons/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
