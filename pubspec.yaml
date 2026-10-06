@@ -1,4 +1,4 @@
-name: MessLife
+name: messlife
 description: "MessLife - The Easiest Solution To Find And Manage A Mess"
 publish_to: 'none'
 
@@ -16,6 +16,7 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_auth: ^6.7.0
   google_sign_in: ^7.2.0
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
