@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
 abstract final class MessLifeColors {
-  // Palette taken from messlife_appicon.png
-  static const ink = Color(0xFF2B2D8A); // fork / spoon / outlines
-  static const gradientStart = Color(0xFF3F4BA8);
-  static const gradientEnd = Color(0xFF261C66);
-  static const inkDark = Color(0xFF1B1550); // darker shade for splash background
+  // Palette sampled from assets/icons/messlife_appicon.png
+  static const ink = Color(0xFF0F2A52); // buttons, app bar, outlines
+  static const gradientStart = Color(0xFF0B1F3A);
+  static const gradientEnd = Color(0xFF153F6F);
+  static const inkDark = Color(0xFF0B1F3A); // splash / dark backgrounds
 
-  static const cream = Color(0xFFF5F2EA);
-  static const red = Color(0xFFD42026);
+  static const orange = Color(0xFFFF7B3D); // logo pin accent
+  static const cream = Color(0xFFFFF8F2);
+  static const red = Color(0xFFD42026); // errors
   static const redDark = Color(0xFF98151A);
 
   static const textPrimary = ink;
-  static const background = Color(0xFFF7F5EF);
+  static const background = Color(0xFFF6F8FC);
 }
 
 final messLifeTheme = ThemeData(
@@ -21,7 +22,7 @@ final messLifeTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(
     seedColor: MessLifeColors.ink,
     primary: MessLifeColors.ink,
-    secondary: MessLifeColors.red,
+    secondary: MessLifeColors.orange,
     error: MessLifeColors.red,
     surface: MessLifeColors.cream,
     brightness: Brightness.light,
@@ -31,7 +32,7 @@ final messLifeTheme = ThemeData(
     foregroundColor: MessLifeColors.cream,
   ),
   floatingActionButtonTheme: const FloatingActionButtonThemeData(
-    backgroundColor: MessLifeColors.red,
-    foregroundColor: MessLifeColors.cream,
+    backgroundColor: MessLifeColors.orange,
+    foregroundColor: MessLifeColors.inkDark,
   ),
 );

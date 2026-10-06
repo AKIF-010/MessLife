@@ -1,4 +1,4 @@
-name: MessLife
+name: messlife
 description: "MessLife - The Easiest Solution To Find And Manage A Mess"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -38,6 +38,7 @@ dependencies:
   firebase_core: ^4.15.0
   firebase_auth: ^6.7.0
   google_sign_in: ^7.2.0
+  flutter_native_splash: ^2.4.6
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,16 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   adaptive_icon_background: "assets/icons/messlife_background.png"
   adaptive_icon_foreground: "assets/icons/messlife_foreground.png"
+
+# ── Native splash: app logo on a solid background when the icon is tapped ──
+# Run: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#0F2A4E"
+  image: assets/icons/messlife_foreground.png
+  android_12:
+    color: "#0F2A4E"
+    image: assets/icons/messlife_foreground.png
+    icon_background_color: "#0F2A4E"
 
 # The following section is specific to Flutter packages.
 flutter:
