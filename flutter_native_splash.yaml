@@ -1,0 +1,23 @@
+# Native (pre-Flutter) splash = the normal Android flow:
+#   system splash (app icon on dark teal)  ->  MessLifeSplash animation  ->  app
+# Generate with:
+#   dart run flutter_native_splash:remove
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#04222C"
+  color_dark: "#04222C"
+  image: assets/app_logo/app_icon_foreground.png
+  image_dark: assets/app_logo/app_icon_foreground.png
+
+  android: true
+  ios: true
+  web: true
+
+  # Android 12+ system splash (icon is drawn inside a circle by Android).
+  android_12:
+    color: "#04222C"
+    color_dark: "#04222C"
+    image: assets/app_logo/app_icon_foreground.png
+    image_dark: assets/app_logo/app_icon_foreground.png
+    icon_background_color: "#073847"
+    icon_background_color_dark: "#073847"
