@@ -1,10 +1,12 @@
+// File: lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import '../core/app_colors.dart';
 import '../core/language_controller.dart';
 import '../services/auth_service.dart';
 import '../widgets/common_widgets.dart';
-import 'login_screen.dart';
+import 'guest_dashboard_screen.dart';
 
+/// Post-login home (placeholder until the real dashboard is built).
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -52,7 +54,9 @@ class HomeScreen extends StatelessWidget {
                       await AuthService.instance.signOut();
                       if (!context.mounted) return;
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const GuestDashboardScreen(),
+                        ),
                             (route) => false,
                       );
                     },
