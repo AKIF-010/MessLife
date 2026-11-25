@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import 'archive_screen.dart';
 import 'daily_screen.dart';
 
@@ -642,7 +644,14 @@ class StatusDot extends StatelessWidget {
 /// The card is part of the layout, so its height never has to be guessed:
 /// the gradient simply stops [_overlap] pixels above the bottom of the card.
 class DashboardHeader extends StatelessWidget {
-  const DashboardHeader({super.key});
+  const DashboardHeader({
+    required this.firstName,
+    required this.dateText,
+    super.key,
+  });
+
+  final String firstName;
+  final String dateText;
 
   static const double _overlap = 46;
 
@@ -673,7 +682,7 @@ class DashboardHeader extends StatelessWidget {
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(16, top + 16, 16, 0),
-          child: const Column(
+          child: Column(
             children: [
               Row(
                 children: [
@@ -694,7 +703,7 @@ class DashboardHeader extends StatelessWidget {
                         ),
                         SizedBox(height: 1),
                         Text(
-                          'Welcome, Akif!',
+                          firstName.isEmpty ? 'Welcome!' : 'Welcome, $firstName!',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 21,
@@ -704,7 +713,7 @@ class DashboardHeader extends StatelessWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Sun, 22 November 2026',
+                          dateText,
                           style: TextStyle(
                             color: Color(0x8CFFFFFF),
                             fontSize: 11.5,
@@ -1130,7 +1139,7 @@ class MemberTableRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    member.name.substring(0, 1),
+                    member.name.isEmpty ? '?' : member.name.substring(0, 1),
                     style: TextStyle(
                       color: member.isCurrentUser
                           ? Colors.white
@@ -1368,18 +1377,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool utilityExpanded = false;
   final _scroll = ScrollController();
 
+  /// First name of the signed-in user (from Firestore users/{uid}).
+  String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
   @override
   void dispose() {
     _scroll.dispose();
     super.dispose();
   }
 
-  final members = const [
-    MemberStat('Solikath', 33.5, 1791, 1919, 128),
-    MemberStat('Sourov', 7, 374, 248, -239),
-    MemberStat('Saiful', 31.5, 1684, 1500, 184),
-    MemberStat('Mushfiq', 32.5, 1737, 1868, 190),
-    MemberStat('Akif', 33.5, 1791, 1992, 201, isCurrentUser: true),
+  String _fallbackName() {
+    final dn = (AuthService.instance.currentUser?.displayName ?? '').trim();
+    return dn.isEmpty ? '' : dn.split(RegExp(r'\s+')).first;
+  }
+
+  Future<void> _loadProfile() async {
+    final user = AuthService.instance.currentUser;
+    if (user == null) return;
+    var name = _fallbackName();
+    try {
+      final data = await UserService.instance.getUser(user.uid);
+      final first = (data?['first_name'] as String?)?.trim() ?? '';
+      if (first.isNotEmpty) name = first;
+    } catch (_) {
+      // Offline or rules issue: keep the Google/Auth display name fallback.
+    }
+    if (mounted) setState(() => _firstName = name);
+  }
+
+  static String _todayText() {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June', 'July',
+      'August', 'September', 'October', 'November', 'December',
+    ];
+    final n = DateTime.now();
+    return '${days[n.weekday - 1]}, ${n.day} ${months[n.month - 1]} ${n.year}';
+  }
+
+  // Other members are still sample data until mess membership is built.
+  // The current-user row uses the real signed-in user's first name.
+  List<MemberStat> get members => [
+    const MemberStat('Solikath', 33.5, 1791, 1919, 128),
+    const MemberStat('Sourov', 7, 374, 248, -239),
+    const MemberStat('Saiful', 31.5, 1684, 1500, 184),
+    const MemberStat('Mushfiq', 32.5, 1737, 1868, 190),
+    MemberStat(
+      _firstName.isEmpty ? 'You' : _firstName,
+      33.5,
+      1791,
+      1992,
+      201,
+      isCurrentUser: true,
+    ),
   ];
 
   @override
@@ -1408,7 +1464,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         physics: const ClampingScrollPhysics(),
                         child: Column(
                           children: [
-                            const DashboardHeader(),
+                            DashboardHeader(firstName: _firstName, dateText: _todayText()),
                             const SizedBox(height: 18),
                             _sectionHeader(
                               title: 'QUICK ACTIONS',
@@ -1529,14 +1585,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               DashboardBottomNavigation(
                 selectedIndex: selectedNavigationIndex,
                 onSelected: (index) {
-                  // Daily tab opens its own screen; Home stays highlighted here.
+                  if (index == 0) return; // already on Home
                   if (index == 1) {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const DailyScreen()),
                     );
                     return;
                   }
-                  setState(() => selectedNavigationIndex = index);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Coming soon')),
+                  );
                 },
               ),
             ],

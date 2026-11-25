@@ -33,10 +33,8 @@ class _MealPlan {
   /// One-day override ("Today only"). null = no override.
   bool? today;
 
-  /// Snapshot of [always] before the last change, so "Today only" can undo it.
-  bool baseAlways = true;
-
-  /// Value the user just switched to, waiting for a scope choice.
+  /// Value the user asked for (opposite of the current state), applied only
+  /// after they pick "Today only" or "Always". Until then nothing changes.
   bool pendingValue = true;
 
   /// Mini drop-down (Today only / Always) is open.
@@ -115,10 +113,14 @@ class _DailyScreenState extends State<DailyScreen> {
   void _toggleMeal(_MealPlan m, bool value) {
     if (_paused) return;
     setState(() {
-      m.baseAlways = m.always;
-      m.pendingValue = value;
-      m.always = value; // "Always" is the default scope
-      m.today = null;
+      if (m.pickerOpen) {
+        // Tapping the switch again cancels: the state was never changed.
+        m.pickerOpen = false;
+        return;
+      }
+      // Do NOT change the meal yet. Remember what was asked for and let the
+      // user choose the scope first.
+      m.pendingValue = !m.effective;
       m.pickerOpen = true;
     });
   }
@@ -126,9 +128,10 @@ class _DailyScreenState extends State<DailyScreen> {
   void _chooseScope(_MealPlan m, {required bool todayOnly}) {
     setState(() {
       if (todayOnly) {
-        m.always = m.baseAlways;
-        m.today = m.pendingValue;
+        // One-day override; the permanent plan stays as it was.
+        m.today = m.pendingValue == m.always ? null : m.pendingValue;
       } else {
+        // Permanent change; clears any one-day override.
         m.always = m.pendingValue;
         m.today = null;
       }
@@ -823,7 +826,9 @@ class _MealRow extends StatelessWidget {
                       icon: Icons.today_rounded,
                       iconColor: MessLifeColors.information,
                       title: 'Today only',
-                      subtitle: 'Reverts tomorrow',
+                      subtitle: meal.pendingValue
+                          ? 'On for today'
+                          : 'Off for today',
                       selected: false,
                       onTap: () => onScope(true),
                     ),
@@ -834,8 +839,10 @@ class _MealRow extends StatelessWidget {
                       icon: Icons.event_repeat_rounded,
                       iconColor: MessLifeColors.information,
                       title: 'Always',
-                      subtitle: 'Until changed',
-                      selected: true,
+                      subtitle: meal.pendingValue
+                          ? 'On until changed'
+                          : 'Off until changed',
+                      selected: false,
                       onTap: () => onScope(false),
                     ),
                   ),

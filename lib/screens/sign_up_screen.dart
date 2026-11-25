@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/language_controller.dart';
-import '../core/validators.dart';
 import '../services/auth_flow.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/phone_field.dart';
 
 /// Step 1 of 2: your details. Step 2 is the email verification page.
 class SignUpScreen extends StatefulWidget {
@@ -27,6 +27,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmCtrl = TextEditingController();
   bool _obscure = true;
   bool _loading = false;
+  Country _phoneCountry = kBangladesh;
   String? _gender; // "male" | "female"
   bool _genderError = false;
 
@@ -61,7 +62,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           await UserService.instance.ensureProfile(
             user,
             fullName: _nameCtrl.text.trim(),
-            phone: normalizeBdPhone(_phoneCtrl.text),
+            phone: PhoneRules.toE164(_phoneCountry, _phoneCtrl.text),
             gender: _gender,
             provider: 'email',
             locale: locale,
@@ -150,27 +151,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 },
                               ),
                               const SizedBox(height: 14),
-                              AppTextField(
+                              PhoneField(
                                 label: context.tr('phoneLabel'),
-                                hint: context.tr('phoneHint'),
                                 controller: _phoneCtrl,
-                                prefixText: '+880',
+                                country: _phoneCountry,
+                                onCountryChanged: (c) => setState(() => _phoneCountry = c),
                                 enabled: !_loading,
-                                keyboardType: TextInputType.phone,
                                 textInputAction: TextInputAction.next,
-                                autofillHints: const [
-                                  AutofillHints.telephoneNumber,
-                                ],
-                                validator: (v) {
-                                  final t = v?.trim() ?? '';
-                                  if (t.isEmpty) {
-                                    return context.tr('phoneRequired');
-                                  }
-                                  if (normalizeBdPhone(t) == null) {
-                                    return context.tr('phoneInvalid');
-                                  }
-                                  return null;
-                                },
+                                autofillHints: const [AutofillHints.telephoneNumber],
                               ),
                               const SizedBox(height: 14),
                               AppTextField(
