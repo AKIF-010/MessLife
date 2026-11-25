@@ -1,5 +1,9 @@
 // File: lib/screens/registration_screen.dart
+import 'dart:typed_data';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/app_colors.dart';
 import '../core/language_controller.dart';
@@ -8,6 +12,7 @@ import '../services/auth_flow.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../widgets/common_widgets.dart';
+import '../widgets/phone_field.dart';
 
 /// Post-login registration, 3 steps:
 ///   1) Personal info   2) Contact & identity   3) Occupation & emergency
@@ -68,6 +73,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _scroll = ScrollController();
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  Country _phoneCountry = kBangladesh;
+  Country _emCountry = kBangladesh;
   final _emNameCtrl = TextEditingController();
   final _emPhoneCtrl = TextEditingController();
 
@@ -85,6 +92,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _occupation;
   String? _relation;
   bool _agree = false;
+
+  // Verification document (optional). Uploaded when registration is saved.
+  final _picker = ImagePicker();
+  Uint8List? _docBytes;
+  String _docName = 'id.jpg';
 
   bool _genderError = false;
   bool _occError = false;
@@ -125,8 +137,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final g = d['gender'];
       if (g == 'male' || g == 'female') _gender = g as String;
       final p = d['phone'];
-      if (p is String && p.startsWith('+880') && p.length > 4) {
-        _phoneCtrl.text = '0${p.substring(4)}';
+      if (p is String) {
+        final parts = PhoneRules.fromE164(p);
+        if (parts != null) {
+          _phoneCountry = parts.$1;
+          _phoneCtrl.text = parts.$2;
+        }
       }
       final bd = d['birth_day'];
       final bm = d['birth_month'];
@@ -221,15 +237,28 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     if (_emergencyStarted) {
       emergency = {
         'name': _emNameCtrl.text.trim(),
-        'phone': normalizeBdPhone(_emPhoneCtrl.text)!,
+        'phone': PhoneRules.toE164(_emCountry, _emPhoneCtrl.text)!,
         'relation': _relation!,
       };
+    }
+
+    setState(() => _saving = true);
+    String? docPath;
+    if (_docBytes != null) {
+      try {
+        docPath = await _uploadDoc(user.uid);
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _saving = false);
+        showAppSnack(context, 'Photo upload failed. Check your connection and try again.');
+        return;
+      }
     }
 
     final data = RegistrationData(
       fullName: _nameCtrl.text.trim(),
       gender: _gender!,
-      phone: normalizeBdPhone(_phoneCtrl.text)!,
+      phone: PhoneRules.toE164(_phoneCountry, _phoneCtrl.text)!,
       birthDay: _day,
       birthMonth: _month,
       birthYear: _year,
@@ -238,8 +267,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       occupationType: _occupation!,
       occupationLabel: _occupationLabels[_occupation]!,
       emergency: emergency,
+      verificationDocPath: docPath,
     );
 
+    if (!mounted) return;
     setState(() => _saving = true);
     try {
       await UserService.instance.completeRegistration(
@@ -254,6 +285,162 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  // ---------- Verification document ----------
+
+  Future<void> _chooseDocSource() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source != null) await _pickDoc(source);
+  }
+
+  Future<void> _pickDoc(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 80,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+        if (mounted) showAppSnack(context, 'Image is too large (max 5 MB)');
+        return;
+      }
+      if (!mounted) return;
+      setState(() {
+        _docBytes = bytes;
+        _docName = file.name;
+      });
+    } catch (_) {
+      if (mounted) {
+        showAppSnack(context, 'Could not open the photo. Check app permissions.');
+      }
+    }
+  }
+
+  /// Uploads the picked image and returns its Storage path.
+  Future<String> _uploadDoc(String uid) async {
+    final isPng = _docName.toLowerCase().endsWith('.png');
+    final ext = isPng ? 'png' : 'jpg';
+    final ref = FirebaseStorage.instance.ref(
+      'verification_docs/$uid/id_${DateTime.now().millisecondsSinceEpoch}.$ext',
+    );
+    await ref.putData(
+      _docBytes!,
+      SettableMetadata(contentType: isPng ? 'image/png' : 'image/jpeg'),
+    );
+    return ref.fullPath;
+  }
+
+  Widget _docPicker() {
+    final bytes = _docBytes;
+    if (bytes == null) {
+      return DashedBorderBox(
+        color: AppColors.mintBorder,
+        fill: AppColors.fieldFill,
+        onTap: _chooseDocSource,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: AppColors.cardMint,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.photo_camera_outlined,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.tr('tapUpload'),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.dark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.tr('docTypes'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.memory(
+            bytes,
+            height: 170,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: _saving ? null : _chooseDocSource,
+              icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+              label: const Text('Change'),
+            ),
+            TextButton.icon(
+              onPressed: _saving ? null : () => setState(() => _docBytes = null),
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('Remove'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   // ---------- UI ----------
@@ -634,22 +821,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                AppTextField(
+                PhoneField(
                   label: context.tr('phoneNumberLabel'),
-                  hint: context.tr('phoneHintLong'),
                   controller: _phoneCtrl,
-                  prefixText: '+880',
-                  keyboardType: TextInputType.phone,
+                  country: _phoneCountry,
+                  onCountryChanged: (c) => setState(() => _phoneCountry = c),
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.telephoneNumber],
-                  validator: (v) {
-                    final t = v?.trim() ?? '';
-                    if (t.isEmpty) return context.tr('phoneRequired');
-                    if (normalizeBdPhone(t) == null) {
-                      return context.tr('phoneInvalid');
-                    }
-                    return null;
-                  },
                 ),
               ],
             ),
@@ -678,56 +856,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         ),
         SectionCard(
           title: context.tr('verificationDoc'),
-          child: DashedBorderBox(
-            color: AppColors.mintBorder,
-            fill: AppColors.fieldFill,
-            onTap: () =>
-                showAppSnack(context, context.tr('docSoon'), error: false),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: AppColors.cardMint,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.photo_camera_outlined,
-                      size: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          context.tr('tapUpload'),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.dark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          context.tr('docTypes'),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.muted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          child: _docPicker(),
         ),
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 4),
@@ -896,22 +1025,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                AppTextField(
+                PhoneField(
                   label: context.tr('phoneNumberLabel'),
-                  hint: context.tr('phoneHintLong'),
                   controller: _emPhoneCtrl,
-                  prefixText: '+880',
-                  keyboardType: TextInputType.phone,
+                  country: _emCountry,
+                  onCountryChanged: (c) => setState(() => _emCountry = c),
+                  isRequired: () => _emergencyStarted,
+                  requiredKey: 'fieldRequired',
                   textInputAction: TextInputAction.done,
-                  validator: (v) {
-                    final t = v?.trim() ?? '';
-                    if (!_emergencyStarted) return null;
-                    if (t.isEmpty) return context.tr('fieldRequired');
-                    if (normalizeBdPhone(t) == null) {
-                      return context.tr('phoneInvalid');
-                    }
-                    return null;
-                  },
                 ),
               ],
             ),

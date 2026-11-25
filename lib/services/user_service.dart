@@ -20,6 +20,7 @@ class RegistrationData {
     this.bloodGroup,
     this.religion,
     this.emergency,
+    this.verificationDocPath,
   });
 
   final String fullName;
@@ -33,6 +34,7 @@ class RegistrationData {
   final String? bloodGroup;
   final String? religion;
   final Map<String, String>? emergency; // {name, phone, relation}
+  final String? verificationDocPath; // Firebase Storage path (optional)
 }
 
 /// Reads/writes users/{uid} (private) and public_profiles/{uid}.
@@ -151,6 +153,10 @@ class UserService {
       'onboarding_complete': true,
       'schema_version': 1.0,
     };
+    if (d.verificationDocPath != null) {
+      userData['verification_doc_path'] = d.verificationDocPath;
+      userData['verification_status'] = 'pending';
+    }
     if (existing?['gender'] != d.gender) {
       userData['gender_updated_at'] = now;
     }
